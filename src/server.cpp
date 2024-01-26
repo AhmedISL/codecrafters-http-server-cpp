@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <string>
 #include <cstring>
+#include <sys/_types/_ssize_t.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -49,9 +50,31 @@ int main(int argc, char **argv) {
   
   std::cout << "Waiting for a client to connect...\n";
   
-  accept(server_fd, (struct sockaddr *) &client_addr, (socklen_t *) &client_addr_len);
+  int client_socket = accept(server_fd, (struct sockaddr *) &client_addr, (socklen_t *) &client_addr_len);
   std::cout << "Client connected\n";
-  
+
+  if(client_socket == -1)
+  {
+    std::cerr << "accept failed\n";
+    return 1;
+  }
+
+  char buffer[1024];
+  ssize_t bytes_recieved = recv(client_socket, buffer, sizeof(buffer), 0);
+  if(bytes_recieved == -1)
+  {
+    std::cerr << "reception failed\n";
+    return 1;
+  }
+
+  const char *http_response = "HTTP/1.1 200 OK\r\n\r\n";
+  ssize_t bytes_sent = send(client_socket, http_response, strlen(http_response), 0);
+  if (bytes_sent == -1) {
+    std::cerr << "send failed\n";
+    return 1;
+  }
+
+  close(client_socket);
   close(server_fd);
 
   return 0;
