@@ -1,5 +1,8 @@
+#include <_types/_uint8_t.h>
+#include <cstddef>
 #include <iostream>
 #include <cstdlib>
+#include <sstream>
 #include <string>
 #include <cstring>
 #include <unistd.h>
@@ -7,6 +10,29 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <vector>
+
+const uint8_t PATH_INDEX = 1;
+
+std::string extractPath(char* buff)
+{
+  // Input should as follow: GET /index.html HTTP/1.1\r\nHost: localhost:4221\r\nUser-Agent: curl/7.64.1\r\n
+  std::vector<std::string> lines;
+  std::string line;
+
+  if(buff == NULL)
+  {
+    std::cerr << __PRETTY_FUNCTION__ << " buffer passed is NULL!!\n";
+  }
+
+  std::istringstream iss(buff);
+  while(iss >> line)
+  {
+    lines.push_back(line);
+  }
+
+  return lines[PATH_INDEX];
+}
 
 int main(int argc, char **argv) {
   // You can use print statements as follows for debugging, they'll be visible when running tests.
@@ -67,8 +93,19 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    const char *http_response = "HTTP/1.1 200 OK\r\n\r\n";
-    ssize_t bytes_sent = send(client_socket, http_response, strlen(http_response), 0);
+    std::string path = extractPath(buffer);
+
+    std::string http_response;
+    if(path.compare("/"))
+    {
+      http_response = "HTTP/1.1 200 OK\r\n\r\n";
+    }
+    else {
+      http_response = "HTTP/1.1 404 Not Found\r\n\r\n";
+    }
+
+    
+    ssize_t bytes_sent = send(client_socket, http_response.c_str(), strlen(http_response.c_str()), 0);
     if (bytes_sent == -1) {
       std::cerr << "send failed\n";
       return 1;
